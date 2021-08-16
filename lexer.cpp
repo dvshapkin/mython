@@ -88,34 +88,47 @@ if (rhs.Is<type>()) return os << #type;
     }
 
     Token Lexer::NextToken() {
-        while (char ch = static_cast<char>(in_.get())) {
+        while (in_) {
+            int ch = in_.get();
             if (ch == EOF) {
                 tokens_.emplace_back(token_type::Eof{});
+                break;
             } else if (ch == '\r') {
                 tokens_.emplace_back(token_type::Return{});
+                break;
             } else if (ch == '\n') {
                 tokens_.emplace_back(token_type::Newline{});
+                break;
             } else if (ch == '#') {
                 SkipComment();
             } else if (ch == ' ') {
                 if (CurrentToken().Is<token_type::Newline>()) {
                     ReadIndent();
+                    break;
                 } else {
                     SkipSpaces();
                 }
             } else if (ch == '"' || ch == '\'') {
                 ReadString();
+                break;
             } else if (isdigit(ch)) {
                 ReadNumber();
-            } else if (isalpha(ch)) {
+                break;
+            } else if (isalpha(ch) || ch == '_') {
                 ReadIdentifier();
+                break;
+            } else if (ch == '!' || ch == '=' || ch == '<' || ch == '>') {
+                if (ReadComparison(ch)) break;
+            } else {
+                tokens_.emplace_back(token_type::Char{static_cast<char>(ch)});
+                break;
             }
         }
         return tokens_.back();
     }
 
     void Lexer::SkipComment() {
-        for (; in_.get() != '\n';);
+        for (; !(in_.get() == '\n' || in_.eof()););
         in_.unget();    // вернем последний считанный символ (\n) в поток
     }
 
@@ -141,12 +154,11 @@ if (rhs.Is<type>()) return os << #type;
     void Lexer::ReadString() {
         in_.unget();
         std::string s;
-        char ch, prev_ch = '\0';
-        const char begin_quote = static_cast<char>(in_.get());
-        while ((ch = static_cast<char>(in_.get()))
-               && !(ch == begin_quote && prev_ch != '\\')) {
-            s += ch;
-            prev_ch = ch;
+        const int begin_quote = in_.get();
+        for (int ch = in_.get(), prev_ch = '\0';
+             in_ && !(ch == begin_quote && prev_ch != '\\');
+             prev_ch = ch, ch = in_.get()) {
+            s += static_cast<char>(ch);
         }
         tokens_.emplace_back(token_type::String{std::move(s)});
     }
@@ -154,16 +166,71 @@ if (rhs.Is<type>()) return os << #type;
     void Lexer::ReadNumber() {
         in_.unget();
         std::string s;
-        char ch;
-        while ((ch = static_cast<char>(in_.get())) && isdigit(ch)) {
-            s += ch;
+        for (int ch = in_.get(); in_ && isdigit(ch); ch = in_.get()) {
+            s += static_cast<char>(ch);
         }
         in_.unget();    // вернем последний считанный символ (не цифру) в поток
         tokens_.emplace_back(token_type::Number{stoi(s)});
     }
 
     void Lexer::ReadIdentifier() {
+        in_.unget();
+        std::string s;
+        for (int ch = in_.get();
+             in_ && (isalpha(ch) || ch == '_' || isdigit(ch));
+             ch = in_.get()) {
+            s += static_cast<char>(ch);
+        }
+        in_.unget();    // вернем последний считанный символ в поток
 
+        if (s == "class"sv) {
+            tokens_.emplace_back(token_type::Class{});
+        } else if (s == "if"sv) {
+            tokens_.emplace_back(token_type::If{});
+        } else if (s == "else"sv) {
+            tokens_.emplace_back(token_type::Else{});
+        } else if (s == "def"sv) {
+            tokens_.emplace_back(token_type::Def{});
+        } else if (s == "print"sv) {
+            tokens_.emplace_back(token_type::Print{});
+        } else if (s == "and"sv) {
+            tokens_.emplace_back(token_type::And{});
+        } else if (s == "or"sv) {
+            tokens_.emplace_back(token_type::Or{});
+        } else if (s == "not"sv) {
+            tokens_.emplace_back(token_type::Not{});
+        } else if (s == "None"sv) {
+            tokens_.emplace_back(token_type::None{});
+        } else if (s == "True"sv) {
+            tokens_.emplace_back(token_type::True{});
+        } else if (s == "False"sv) {
+            tokens_.emplace_back(token_type::False{});
+        } else {
+            tokens_.emplace_back(token_type::Id{std::move(s)});
+        }
+    }
+
+    bool Lexer::ReadComparison(const char ch) {
+        int next = in_.get();
+        if (ch == '!') {
+            if (next == '=') {
+                tokens_.emplace_back(token_type::NotEq{});
+                return true;
+            } else {
+                throw LexerError("! without =");
+            }
+        } else if (ch == '=' && next == '=') {
+            tokens_.emplace_back(token_type::Eq{});
+            return true;
+        } else if (ch == '<' && next == '=') {
+            tokens_.emplace_back(token_type::LessOrEq{});
+            return true;
+        } else if (ch == '>' && next == '=') {
+            tokens_.emplace_back(token_type::GreaterOrEq{});
+            return true;
+        }
+        //in_.unget();
+        return false;
     }
 
 }  // namespace parse

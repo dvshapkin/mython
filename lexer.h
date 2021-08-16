@@ -122,17 +122,18 @@ namespace parse {
         template<typename T>
         const T &Expect() const {
             using namespace std::literals;
-            // Заглушка. Реализуйте метод самостоятельно
-            throw LexerError("Not implemented"s);
+            if (CurrentToken().Is<T>()) return CurrentToken().As<T>();
+            throw LexerError("Not expected current token type"s);
         }
 
         // Метод проверяет, что текущий токен имеет тип T, а сам токен содержит значение value.
         // В противном случае метод выбрасывает исключение LexerError
         template<typename T, typename U>
-        void Expect(const U & /*value*/) const {
+        void Expect(const U & value) const {
             using namespace std::literals;
-            // Заглушка. Реализуйте метод самостоятельно
-            throw LexerError("Not implemented"s);
+            if (!CurrentToken().Is<T>() || CurrentToken().As<T>().value != value) {
+                throw LexerError("Not expected current token type or value"s);
+            }
         }
 
         // Если следующий токен имеет тип T, метод возвращает ссылку на него.
@@ -140,17 +141,22 @@ namespace parse {
         template<typename T>
         const T &ExpectNext() {
             using namespace std::literals;
-            // Заглушка. Реализуйте метод самостоятельно
-            throw LexerError("Not implemented"s);
+            Token next = NextToken();
+            if (!next.Is<T>()) {
+                throw LexerError("Not expected next token type"s);
+            }
+            return CurrentToken().As<T>();
         }
 
         // Метод проверяет, что следующий токен имеет тип T, а сам токен содержит значение value.
         // В противном случае метод выбрасывает исключение LexerError
         template<typename T, typename U>
-        void ExpectNext(const U & /*value*/) {
+        void ExpectNext(const U & value) {
             using namespace std::literals;
-            // Заглушка. Реализуйте метод самостоятельно
-            throw LexerError("Not implemented"s);
+            Token next = NextToken();
+            if (!next.Is<T>() || next.As<T>().value != value) {
+                throw LexerError("Not expected next token type or value"s);
+            }
         }
 
     private:
@@ -160,6 +166,7 @@ namespace parse {
         void ReadString();
         void ReadNumber();
         void ReadIdentifier();
+        bool ReadComparison(char ch);
 
         std::istream &in_;
         int current_indent_ = 0;
