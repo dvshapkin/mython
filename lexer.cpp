@@ -3,12 +3,14 @@
 #include <algorithm>
 #include <charconv>
 #include <unordered_map>
+#include <cassert>
+#include <cctype>
 
 using namespace std;
 
 namespace parse {
 
-    bool operator==(const Token& lhs, const Token& rhs) {
+    bool operator==(const Token &lhs, const Token &rhs) {
         using namespace token_type;
 
         if (lhs.index() != rhs.index()) {
@@ -29,11 +31,11 @@ namespace parse {
         return true;
     }
 
-    bool operator!=(const Token& lhs, const Token& rhs) {
+    bool operator!=(const Token &lhs, const Token &rhs) {
         return !(lhs == rhs);
     }
 
-    std::ostream& operator<<(std::ostream& os, const Token& rhs) {
+    std::ostream &operator<<(std::ostream &os, const Token &rhs) {
         using namespace token_type;
 
 #define VALUED_OUTPUT(type) \
@@ -75,18 +77,93 @@ if (rhs.Is<type>()) return os << #type;
         return os << "Unknown token :("sv;
     }
 
-    Lexer::Lexer(std::istream& /*input*/) {
-        // Реализуйте конструктор самостоятельно
+    Lexer::Lexer(std::istream &input)
+            : in_(input) {
+        NextToken();
     }
 
-    const Token& Lexer::CurrentToken() const {
-        // Заглушка. Реализуйте метод самостоятельно
-        throw std::logic_error("Not implemented"s);
+    const Token &Lexer::CurrentToken() const {
+        assert(!tokens_.empty());
+        return tokens_.back();
     }
 
     Token Lexer::NextToken() {
-        // Заглушка. Реализуйте метод самостоятельно
-        throw std::logic_error("Not implemented"s);
+        while (char ch = static_cast<char>(in_.get())) {
+            if (ch == EOF) {
+                tokens_.emplace_back(token_type::Eof{});
+            } else if (ch == '\r') {
+                tokens_.emplace_back(token_type::Return{});
+            } else if (ch == '\n') {
+                tokens_.emplace_back(token_type::Newline{});
+            } else if (ch == '#') {
+                SkipComment();
+            } else if (ch == ' ') {
+                if (CurrentToken().Is<token_type::Newline>()) {
+                    ReadIndent();
+                } else {
+                    SkipSpaces();
+                }
+            } else if (ch == '"' || ch == '\'') {
+                ReadString();
+            } else if (isdigit(ch)) {
+                ReadNumber();
+            } else if (isalpha(ch)) {
+                ReadIdentifier();
+            }
+        }
+        return tokens_.back();
+    }
+
+    void Lexer::SkipComment() {
+        for (; in_.get() != '\n';);
+        in_.unget();    // вернем последний считанный символ (\n) в поток
+    }
+
+    int Lexer::SkipSpaces() {
+        int space_count = 0;
+        for (; in_.get() == ' '; ++space_count);
+        in_.unget();    // вернем последний считанный символ (не пробельный) в поток
+        return space_count;
+    }
+
+    void Lexer::ReadIndent() {
+        int indent = SkipSpaces() + 1; // один пробел уже считан уровнем выше
+        if (indent % 2 != 0) throw LexerError("Bad indent size");
+        if (indent > current_indent_) {
+            tokens_.emplace_back(token_type::Indent{});
+        }
+        if (indent < current_indent_) {
+            tokens_.emplace_back(token_type::Dedent{});
+        }
+        current_indent_ = indent;
+    }
+
+    void Lexer::ReadString() {
+        in_.unget();
+        std::string s;
+        char ch, prev_ch = '\0';
+        const char begin_quote = static_cast<char>(in_.get());
+        while ((ch = static_cast<char>(in_.get()))
+               && !(ch == begin_quote && prev_ch != '\\')) {
+            s += ch;
+            prev_ch = ch;
+        }
+        tokens_.emplace_back(token_type::String{std::move(s)});
+    }
+
+    void Lexer::ReadNumber() {
+        in_.unget();
+        std::string s;
+        char ch;
+        while ((ch = static_cast<char>(in_.get())) && isdigit(ch)) {
+            s += ch;
+        }
+        in_.unget();    // вернем последний считанный символ (не цифру) в поток
+        tokens_.emplace_back(token_type::Number{stoi(s)});
+    }
+
+    void Lexer::ReadIdentifier() {
+
     }
 
 }  // namespace parse
