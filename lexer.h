@@ -129,7 +129,7 @@ namespace parse {
         // Метод проверяет, что текущий токен имеет тип T, а сам токен содержит значение value.
         // В противном случае метод выбрасывает исключение LexerError
         template<typename T, typename U>
-        void Expect(const U & value) const {
+        void Expect(const U &value) const {
             using namespace std::literals;
             if (!CurrentToken().Is<T>() || CurrentToken().As<T>().value != value) {
                 throw LexerError("Not expected current token type or value"s);
@@ -151,7 +151,7 @@ namespace parse {
         // Метод проверяет, что следующий токен имеет тип T, а сам токен содержит значение value.
         // В противном случае метод выбрасывает исключение LexerError
         template<typename T, typename U>
-        void ExpectNext(const U & value) {
+        void ExpectNext(const U &value) {
             using namespace std::literals;
             Token next = NextToken();
             if (!next.Is<T>() || next.As<T>().value != value) {
@@ -160,13 +160,31 @@ namespace parse {
         }
 
     private:
-        void SkipComment();
-        int SkipSpaces();
-        void ReadIndent();
-        void ReadString();
+        struct TextLine {
+            std::vector<Token> ReadLine(std::istream &in);
+
+            //bool ReadIndent(std::istream &in);
+            static int SkipSpaces(std::istream &in);
+            static void SkipComment(std::istream &in);
+            void ReadString(std::istream &in, int begin_quote);
+
+            int indent_ = 0;
+            std::vector<Token> tokens_;
+        };
+
+        //void SkipComment();
+
+        //int SkipSpaces();
+
+        //bool ReadIndent();
+
+        //void ReadString();
+
         void ReadNumber();
+
         void ReadIdentifier();
-        bool ReadComparison(char ch);
+
+        void ReadComparison(int ch);
 
         std::istream &in_;
         int current_indent_ = 0;
