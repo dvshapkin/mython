@@ -161,33 +161,31 @@ namespace parse {
 
     private:
         struct TextLine {
-            std::vector<Token> ReadLine(std::istream &in);
+            static Lexer::TextLine ReadLine(std::istream &in);
 
-            //bool ReadIndent(std::istream &in);
             static int SkipSpaces(std::istream &in);
+
             static void SkipComment(std::istream &in);
+
             void ReadString(std::istream &in, int begin_quote);
+
+            void ReadNumber(std::istream &in, int first_dig);
+
+            void ReadIdentifier(std::istream &in, int first_sym);
+
+            void ReadComparison(std::istream &in, int ch);
+
+            bool IsEmpty() const;
+
+            bool IsEofOnly();
 
             int indent_ = 0;
             std::vector<Token> tokens_;
         };
 
-        //void SkipComment();
-
-        //int SkipSpaces();
-
-        //bool ReadIndent();
-
-        //void ReadString();
-
-        void ReadNumber();
-
-        void ReadIdentifier();
-
-        void ReadComparison(int ch);
-
         std::istream &in_;
         int current_indent_ = 0;
+        int curr_pos_ = -1;
         std::vector<Token> tokens_;
     };
 

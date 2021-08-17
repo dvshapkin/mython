@@ -84,59 +84,51 @@ if (rhs.Is<type>()) return os << #type;
 
     const Token &Lexer::CurrentToken() const {
         assert(!tokens_.empty());
-        return tokens_.back();
+        return tokens_.at(curr_pos_);
     }
 
     Token Lexer::NextToken() {
-        while (in_) {
-            int ch = in_.get();
-            if (tokens_.empty() || CurrentToken().Is<token_type::Newline>()) {
-                if (ReadIndent()) break;
+        if (static_cast<size_t>(++curr_pos_)  == tokens_.size()) {
+            if (!tokens_.empty() && tokens_.back().Is<token_type::Eof>()) {
+                --curr_pos_;
+                return tokens_.back();
             }
-            if (ch == ' ') {
-//                if (CurrentToken().Is<token_type::Newline>()) {
-//                    if (ReadIndent()) break;
-//                } else {
-                SkipSpaces();
-//                }
-                continue;
-            } else if (ch == '\n') {
-                if (in_.peek() == ' ' || in_.eof()) {
-                    tokens_.emplace_back(token_type::Newline{});
-                    break;
+            TextLine line;
+            for (line = TextLine::ReadLine(in_);
+                 line.IsEmpty();
+                 line = TextLine::ReadLine(in_));
+            if (line.indent_ % 2 != 0) throw LexerError("Bad indent size.");
+            if (!line.IsEofOnly() && line.indent_ > current_indent_) {
+                for (int i = 0; i < (line.indent_ - current_indent_) / 2; ++i) {
+                    tokens_.emplace_back(token_type::Indent{});
                 }
-                continue;
+                current_indent_ = line.indent_;
             }
-            if (ch == '#') {
-                SkipComment();
-                continue;
+            if (!line.IsEofOnly() && line.indent_ < current_indent_) {
+                for (int i = 0; i < (current_indent_ - line.indent_) / 2; ++i) {
+                    tokens_.emplace_back(token_type::Dedent{});
+                }
+                current_indent_ = line.indent_;
             }
-            if (ch == EOF) {
-                tokens_.emplace_back(token_type::Eof{});
-                break;
-            } else if (ch == '"' || ch == '\'') {
-                ReadString();
-                break;
-            } else if (isdigit(ch)) {
-                ReadNumber();
-                break;
-            } else if (isalpha(ch) || ch == '_') {
-                ReadIdentifier();
-                break;
-            } else if (ch == '!' || ch == '=' || ch == '<' || ch == '>') {
-                ReadComparison(ch);
-                break;
-            } else {
-                tokens_.emplace_back(token_type::Char{static_cast<char>(ch)});
-                break;
+            if (line.IsEofOnly() && current_indent_ > 0) {
+                for (int i = 0; i < current_indent_ / 2; ++i) {
+                    tokens_.emplace_back(token_type::Dedent{});
+                }
+                current_indent_ = line.indent_;
+            }
+            //std::copy(line.tokens_.begin(), line.tokens_.end(), tokens_.end());
+            for (const auto &t: line.tokens_) {
+                tokens_.emplace_back(t);
             }
         }
-        return tokens_.back();
+        return tokens_.at(curr_pos_);
     }
 
 
-    std::vector<Token> Lexer::TextLine::ReadLine(std::istream &in) {
-        indent_ = SkipSpaces(in);
+    Lexer::TextLine Lexer::TextLine::ReadLine(std::istream &in) {
+        TextLine line;
+        line.indent_ = SkipSpaces(in);
+
         int ch;
         do {
             ch = in.get();
@@ -145,14 +137,26 @@ if (rhs.Is<type>()) return os << #type;
             } else if (ch == '#') {
                 SkipComment(in);
             } else if (ch == '\n') {
-                tokens_.emplace_back(token_type::Newline{});
+                line.tokens_.emplace_back(token_type::Newline{});
             } else if (ch == EOF) {
-                tokens_.emplace_back(token_type::Eof{});
+                if (!line.IsEmpty() && !line.tokens_.back().Is<token_type::Newline>()) {
+                    line.tokens_.emplace_back(token_type::Newline{});
+                }
+                line.tokens_.emplace_back(token_type::Eof{});
             } else if (ch == '"' || ch == '\'') {
-                ReadString(in, ch);
+                line.ReadString(in, ch);
+            } else if (isdigit(ch)) {
+                line.ReadNumber(in, ch);
+            } else if (isalpha(ch) || ch == '_') {
+                line.ReadIdentifier(in, ch);
+            } else if ((ch == '!' || ch == '=' || ch == '<' || ch == '>') && in.peek() == '=') {
+                line.ReadComparison(in, ch);
+            } else {
+                line.tokens_.emplace_back(token_type::Char{static_cast<char>(ch)});
             }
         } while (!(ch == '\n' || ch == EOF));
-        return tokens_;
+
+        return line;
     }
 
     int Lexer::TextLine::SkipSpaces(std::istream &in) {
@@ -177,71 +181,23 @@ if (rhs.Is<type>()) return os << #type;
         tokens_.emplace_back(token_type::String{std::move(s)});
     }
 
-//    bool Lexer::TextLine::ReadIndent(std::istream &in) {
-//        int indent = SkipSpaces() + 1; // один пробел уже считан уровнем выше
-//        if (indent % 2 != 0) throw LexerError("Bad indent size");
-//        if (indent > current_indent_) {
-//            for (int i=0; i < (indent - current_indent_) / 2; ++i) {
-//                tokens_.emplace_back(token_type::Indent{});
-//            }
-//            current_indent_ = indent;
-//            return true;
-//        }
-//        if (indent < current_indent_) {
-//            for (int i=0; i < (current_indent_ - indent) / 2; ++i) {
-//                tokens_.emplace_back(token_type::Dedent{});
-//            }
-//            current_indent_ = indent;
-//            return true;
-//        }
-//        return false;
-//    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    void Lexer::ReadNumber() {
-        in_.unget();
-        std::string s;
-        for (int ch = in_.get(); in_ && isdigit(ch); ch = in_.get()) {
+    void Lexer::TextLine::ReadNumber(std::istream &in, const int first_dig) {
+        std::string s{static_cast<char>(first_dig)};
+        for (int ch = in.get(); in && isdigit(ch); ch = in.get()) {
             s += static_cast<char>(ch);
         }
-        in_.unget();    // вернем последний считанный символ (не цифру) в поток
+        in.unget();    // вернем последний считанный символ (не цифру) в поток
         tokens_.emplace_back(token_type::Number{stoi(s)});
     }
 
-    void Lexer::ReadIdentifier() {
-        in_.unget();
-        std::string s;
-        for (int ch = in_.get();
-             in_ && (isalpha(ch) || ch == '_' || isdigit(ch));
-             ch = in_.get()) {
+    void Lexer::TextLine::ReadIdentifier(std::istream &in, const int first_sym) {
+        std::string s{static_cast<char>(first_sym)};
+        for (int ch = in.get();
+             in && (isalpha(ch) || ch == '_' || isdigit(ch));
+             ch = in.get()) {
             s += static_cast<char>(ch);
         }
-        in_.unget();    // вернем последний считанный символ в поток
+        in.unget();    // вернем последний считанный символ в поток
 
         if (s == "class"sv) {
             tokens_.emplace_back(token_type::Class{});
@@ -272,25 +228,31 @@ if (rhs.Is<type>()) return os << #type;
         }
     }
 
-    void Lexer::ReadComparison(const int ch) {
-        int next = in_.get();
+    void Lexer::TextLine::ReadComparison(std::istream &in, const int ch) {
         if (ch == '!') {
-            if (next == '=') {
-                tokens_.emplace_back(token_type::NotEq{});
-            } else {
-                in_.unget();
-                throw LexerError("! without =");
-            }
-        } else if (ch == '=' && next == '=') {
+            tokens_.emplace_back(token_type::NotEq{});
+        } else if (ch == '=') {
             tokens_.emplace_back(token_type::Eq{});
-        } else if (ch == '<' && next == '=') {
+        } else if (ch == '<') {
             tokens_.emplace_back(token_type::LessOrEq{});
-        } else if (ch == '>' && next == '=') {
+        } else if (ch == '>') {
             tokens_.emplace_back(token_type::GreaterOrEq{});
-        } else {
-            tokens_.emplace_back(token_type::Char{static_cast<char>(ch)});
-            in_.unget();
         }
+        in.get(); // считаем второй символ
+    }
+
+    bool Lexer::TextLine::IsEmpty() const {
+        return tokens_.empty()
+               || std::all_of(tokens_.cbegin(), tokens_.cend(), [](const auto &t) {
+            return t.template Is<token_type::Newline>();
+        });
+    }
+
+    bool Lexer::TextLine::IsEofOnly() {
+        return tokens_.empty()
+        || std::all_of(tokens_.cbegin(), tokens_.cend(), [](const auto &t) {
+            return t.template Is<token_type::Eof>();
+        });
     }
 
 }  // namespace parse
