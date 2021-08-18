@@ -10,26 +10,26 @@
 #include <vector>
 
 namespace TestRunnerPrivate {
-    template <class Map>
-            std::ostream& PrintMap(std::ostream& os, const Map& m) {
-                os << "{";
-                bool first = true;
-                for (const auto& kv : m) {
-                    if (!first) {
-                        os << ", ";
-                    }
-                    first = false;
-                    os << kv.first << ": " << kv.second;
-                }
-                return os << "}";
+    template<class Map>
+    std::ostream &PrintMap(std::ostream &os, const Map &m) {
+        os << "{";
+        bool first = true;
+        for (const auto &kv : m) {
+            if (!first) {
+                os << ", ";
             }
+            first = false;
+            os << kv.first << ": " << kv.second;
+        }
+        return os << "}";
+    }
 }  // namespace TestRunnerPrivate
 
-template <class T>
-        std::ostream& operator<<(std::ostream& os, const std::vector<T>& s) {
+template<class T>
+std::ostream &operator<<(std::ostream &os, const std::vector<T> &s) {
     os << "{";
     bool first = true;
-    for (const auto& x : s) {
+    for (const auto &x : s) {
         if (!first) {
             os << ", ";
         }
@@ -39,11 +39,11 @@ template <class T>
     return os << "}";
 }
 
-template <class T>
-        std::ostream& operator<<(std::ostream& os, const std::set<T>& s) {
+template<class T>
+std::ostream &operator<<(std::ostream &os, const std::set<T> &s) {
     os << "{";
     bool first = true;
-    for (const auto& x : s) {
+    for (const auto &x : s) {
         if (!first) {
             os << ", ";
         }
@@ -53,18 +53,18 @@ template <class T>
     return os << "}";
 }
 
-template <class K, class V>
-        std::ostream& operator<<(std::ostream& os, const std::map<K, V>& m) {
+template<class K, class V>
+std::ostream &operator<<(std::ostream &os, const std::map<K, V> &m) {
     return TestRunnerPrivate::PrintMap(os, m);
 }
 
-template <class K, class V>
-        std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& m) {
+template<class K, class V>
+std::ostream &operator<<(std::ostream &os, const std::unordered_map<K, V> &m) {
     return TestRunnerPrivate::PrintMap(os, m);
 }
 
-template <class T, class U>
-        void AssertEqual(const T& t, const U& u, const std::string& hint = {}) {
+template<class T, class U>
+void AssertEqual(const T &t, const U &u, const std::string &hint = {}) {
     if (!(t == u)) {
         std::ostringstream os;
         os << "Assertion failed: " << t << " != " << u;
@@ -75,33 +75,33 @@ template <class T, class U>
     }
 }
 
-inline void Assert(bool b, const std::string& hint) {
+inline void Assert(bool b, const std::string &hint) {
     AssertEqual(b, true, hint);
 }
 
 class TestRunner {
 public:
-    template <class TestFunc>
-            void RunTest(TestFunc func, const std::string& test_name) {
-                try {
-                    func();
-                    std::cerr << test_name << " OK" << std::endl;
-                } catch (std::exception& e) {
-                    ++fail_count;
-                    std::cerr << test_name << " fail: " << e.what() << std::endl;
-                } catch (...) {
-                    ++fail_count;
-                    std::cerr << "Unknown exception caught" << std::endl;
-                }
-            }
+    template<class TestFunc>
+    void RunTest(TestFunc func, const std::string &test_name) {
+        try {
+            func();
+            std::cerr << test_name << " OK" << std::endl;
+        } catch (std::exception &e) {
+            ++fail_count;
+            std::cerr << test_name << " fail: " << e.what() << std::endl;
+        } catch (...) {
+            ++fail_count;
+            std::cerr << "Unknown exception caught" << std::endl;
+        }
+    }
 
-            ~TestRunner() {
-                std::cerr.flush();
-                if (fail_count > 0) {
-                    std::cerr << fail_count << " unit tests failed. Terminate" << std::endl;
-                    exit(1);
-                }
-            }
+    ~TestRunner() {
+        std::cerr.flush();
+        if (fail_count > 0) {
+            std::cerr << fail_count << " unit tests failed. Terminate" << std::endl;
+            exit(1);
+        }
+    }
 
 private:
     int fail_count = 0;
@@ -111,15 +111,15 @@ private:
 #define FILE_NAME __FILE__
 #endif
 
-#define ASSERT_EQUAL(x, y)                                                                       \
-{                                                                                            \
+#define ASSERT_EQUAL(x, y)                                                               \
+{                                                                                        \
 std::ostringstream __assert_equal_private_os;                                            \
 __assert_equal_private_os << #x << " != " << #y << ", " << FILE_NAME << ":" << __LINE__; \
 AssertEqual(x, y, __assert_equal_private_os.str());                                      \
 }
 
-#define ASSERT(x)                                                                   \
-{                                                                               \
+#define ASSERT(x)                                                           \
+{                                                                           \
 std::ostringstream __assert_private_os;                                     \
 __assert_private_os << #x << " is false, " << FILE_NAME << ":" << __LINE__; \
 Assert(static_cast<bool>(x), __assert_private_os.str());                    \
@@ -127,38 +127,38 @@ Assert(static_cast<bool>(x), __assert_private_os.str());                    \
 
 #define RUN_TEST(tr, func) tr.RunTest(func, #func)
 
-#define ASSERT_THROWS(expr, expected_exception)                                                   \
-{                                                                                             \
-bool __assert_private_flag = true;                                                        \
-try {                                                                                     \
+#define ASSERT_THROWS(expr, expected_exception)                                       \
+{                                                                                     \
+bool __assert_private_flag = true;                                                    \
+try {                                                                                 \
 expr;                                                                                 \
 __assert_private_flag = false;                                                        \
-} catch (expected_exception&) {                                                           \
-} catch (...) {                                                                           \
+} catch (expected_exception&) {                                                       \
+} catch (...) {                                                                       \
 std::ostringstream __assert_private_os;                                               \
 __assert_private_os << "Expression " #expr                                            \
-" threw an unexpected exception"                               \
-" " FILE_NAME ":"                                              \
-<< __LINE__;                                                      \
+" threw an unexpected exception"                                                      \
+" " FILE_NAME ":"                                                                     \
+<< __LINE__;                                                                          \
 Assert(false, __assert_private_os.str());                                             \
-}                                                                                         \
-if (!__assert_private_flag) {                                                             \
+}                                                                                     \
+if (!__assert_private_flag) {                                                         \
 std::ostringstream __assert_private_os;                                               \
 __assert_private_os << "Expression " #expr                                            \
-" is expected to throw " #expected_exception " " FILE_NAME ":" \
-<< __LINE__;                                                      \
+" is expected to throw " #expected_exception " " FILE_NAME ":"                        \
+<< __LINE__;                                                                          \
 Assert(false, __assert_private_os.str());                                             \
-}                                                                                         \
+}                                                                                     \
 }
 
-#define ASSERT_DOESNT_THROW(expr)                               \
-try {                                                       \
+#define ASSERT_DOESNT_THROW(expr)                       \
+try {                                                   \
 expr;                                                   \
-} catch (...) {                                             \
+} catch (...) {                                         \
 std::ostringstream __assert_private_os;                 \
 __assert_private_os << "Expression " #expr              \
-" threw an unexpected exception" \
-" " FILE_NAME ":"                \
-<< __LINE__;                        \
+" threw an unexpected exception"                        \
+" " FILE_NAME ":"                                       \
+<< __LINE__;                                            \
 Assert(false, __assert_private_os.str());               \
 }
