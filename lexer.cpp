@@ -88,7 +88,7 @@ if (rhs.Is<type>()) return os << #type;
     }
 
     Token Lexer::NextToken() {
-        if (static_cast<size_t>(++curr_pos_)  == tokens_.size()) {
+        if (static_cast<size_t>(++curr_pos_) == tokens_.size()) {
             if (!tokens_.empty() && tokens_.back().Is<token_type::Eof>()) {
                 --curr_pos_;
                 return tokens_.back();
@@ -248,9 +248,9 @@ if (rhs.Is<type>()) return os << #type;
         });
     }
 
-    bool Lexer::TextLine::IsEofOnly() {
+    bool Lexer::TextLine::IsEofOnly() const {
         return tokens_.empty()
-        || std::all_of(tokens_.cbegin(), tokens_.cend(), [](const auto &t) {
+               || std::all_of(tokens_.cbegin(), tokens_.cend(), [](const auto &t) {
             return t.template Is<token_type::Eof>();
         });
     }

@@ -177,7 +177,7 @@ namespace parse {
 
             bool IsEmpty() const;
 
-            bool IsEofOnly();
+            bool IsEofOnly() const;
 
             int indent_ = 0;
             std::vector<Token> tokens_;
