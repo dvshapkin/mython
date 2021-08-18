@@ -351,6 +351,17 @@ abc#
                 ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Eof{}));
             }
         }
+
+        void MyTestStrings() {
+            const string s = R"("two \" words" "two \\ words" "two \\\\\" words" "")";
+            istringstream input(s);
+            Lexer lexer(input);
+
+            ASSERT_EQUAL(lexer.CurrentToken(), Token(token_type::String{"two \" words"s}));
+            ASSERT_EQUAL(lexer.NextToken(), Token(token_type::String{"two \\ words"s}));
+            ASSERT_EQUAL(lexer.NextToken(), Token(token_type::String{"two \\\\\" words"s}));
+            ASSERT_EQUAL(lexer.NextToken(), Token(token_type::String{""s}));
+        }
     }  // namespace
 
     void RunOpenLexerTests(TestRunner& tr) {
@@ -367,6 +378,8 @@ abc#
         RUN_TEST(tr, parse::TestMythonProgram);
         RUN_TEST(tr, parse::TestAlwaysEmitsNewlineAtTheEndOfNonemptyLine);
         RUN_TEST(tr, parse::TestCommentsAreIgnored);
+
+        RUN_TEST(tr, parse::MyTestStrings);
     }
 
 }  // namespace parse

@@ -116,7 +116,6 @@ if (rhs.Is<type>()) return os << #type;
                 }
                 current_indent_ = line.indent_;
             }
-            //std::copy(line.tokens_.begin(), line.tokens_.end(), tokens_.end());
             for (const auto &t: line.tokens_) {
                 tokens_.emplace_back(t);
             }
@@ -172,12 +171,54 @@ if (rhs.Is<type>()) return os << #type;
     }
 
     void Lexer::TextLine::ReadString(std::istream &in, const int begin_quote) {
+
+        auto it = std::istreambuf_iterator<char>(in);
+        auto end = std::istreambuf_iterator<char>();
         std::string s;
-        for (int ch = in.get(), prev_ch = '\0';
-             in && !(ch == begin_quote && prev_ch != '\\');
-             prev_ch = ch, ch = in.get()) {
-            s += static_cast<char>(ch);
+        while (true) {
+            if (it == end) {
+                throw LexerError("String parsing error");
+            }
+            const char ch = *it;
+            if (ch == begin_quote) {
+                ++it;
+                break;
+            } else if (ch == '\\') {
+                ++it;
+                if (it == end) {
+                    throw LexerError("String parsing error");
+                }
+                const char escaped_char = *(it);
+                switch (escaped_char) {
+                    case 'n':
+                        s.push_back('\n');
+                        break;
+                    case 't':
+                        s.push_back('\t');
+                        break;
+                    case 'r':
+                        s.push_back('\r');
+                        break;
+                    case '"':
+                        s.push_back('"');
+                        break;
+                    case '\'':
+                        s.push_back('\'');
+                        break;
+                    case '\\':
+                        s.push_back('\\');
+                        break;
+                    default:
+                        throw LexerError("Unrecognized escape sequence \\"s + escaped_char);
+                }
+            } else if (ch == '\n' || ch == '\r') {
+                throw LexerError("Unexpected end of line"s);
+            } else {
+                s.push_back(ch);
+            }
+            ++it;
         }
+
         tokens_.emplace_back(token_type::String{std::move(s)});
     }
 
