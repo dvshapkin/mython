@@ -1,5 +1,3 @@
-#include "lexer.h"
-#include "runtime.h"
 #include "tests/test_runner_p.h"
 
 #include <iostream>
