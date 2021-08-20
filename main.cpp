@@ -15,9 +15,9 @@ namespace {
 
     void TestAll() {
         TestRunner tr;
-        //-------------------------------------- Lexer
+        //-------------------------------------- Lexer"
         parse::RunOpenLexerTests(tr);
-        //-------------------------------------- Runtime
+        //-------------------------------------- Runtime"
         runtime::RunObjectHolderTests(tr);
         runtime::RunObjectsTests(tr);
     }

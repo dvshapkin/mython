@@ -13,25 +13,26 @@ namespace runtime {
             static int instance_count;
 
             explicit Logger(int value_ = 0)
-            : id_(value_)  //
+                    : id_(value_)  //
             {
                 ++instance_count;
             }
 
-            Logger(const Logger& rhs)
-            : id_(rhs.id_)  //
+            Logger(const Logger &rhs)
+                    : id_(rhs.id_)  //
             {
                 ++instance_count;
             }
 
-            Logger(Logger&& rhs) noexcept
-            : id_(rhs.id_)  //
+            Logger(Logger &&rhs) noexcept
+                    : id_(rhs.id_)  //
             {
                 ++instance_count;
             }
 
-            Logger& operator=(const Logger& /*rhs*/) = default;
-            Logger& operator=(Logger&& /*rhs*/) = default;
+            Logger &operator=(const Logger & /*rhs*/) = default;
+
+            Logger &operator=(Logger && /*rhs*/) = default;
 
             [[nodiscard]] int GetId() const {
                 return id_;
@@ -42,7 +43,7 @@ namespace runtime {
                 --instance_count;
             }
 
-            void Print(ostream& os, [[maybe_unused]] Context& context) override {
+            void Print(ostream &os, [[maybe_unused]] Context &context) override {
                 os << id_;
             }
 
@@ -91,14 +92,14 @@ namespace runtime {
         }
 
         struct TestMethodBody : Executable {
-            using Fn = std::function<ObjectHolder(Closure& closure, Context& context)>;
+            using Fn = std::function<ObjectHolder(Closure &closure, Context &context)>;
             Fn body;
 
             explicit TestMethodBody(Fn body)
-            : body(std::move(body)) {
+                    : body(std::move(body)) {
             }
 
-            ObjectHolder Execute(Closure& closure, Context& context) override {
+            ObjectHolder Execute(Closure &closure, Context &context) override {
                 if (body) {
                     return body(closure, context);
                 }
@@ -109,12 +110,12 @@ namespace runtime {
         void TestMethodInvocation() {
             DummyContext context;
             Closure base_closure;
-            auto base_method_1 = [&base_closure, &context](Closure& closure, Context& ctx) {
+            auto base_method_1 = [&base_closure, &context](Closure &closure, Context &ctx) {
                 ASSERT_EQUAL(&context, &ctx);
                 base_closure = closure;
                 return ObjectHolder::Own(Number{123});
             };
-            auto base_method_2 = [&base_closure, &context](Closure& closure, Context& ctx) {
+            auto base_method_2 = [&base_closure, &context](Closure &closure, Context &ctx) {
                 ASSERT_EQUAL(&context, &ctx);
                 base_closure = closure;
                 return ObjectHolder::Own(Number{456});
@@ -141,7 +142,7 @@ namespace runtime {
             ASSERT_EQUAL(base_closure.count("base_field"s), 0U);
 
             Closure child_closure;
-            auto child_method_1 = [&child_closure, &context](Closure& closure, Context& ctx) {
+            auto child_method_1 = [&child_closure, &context](Closure &closure, Context &ctx) {
                 ASSERT_EQUAL(&context, &ctx);
                 child_closure = closure;
                 return ObjectHolder::Own(String("child"s));
@@ -233,7 +234,7 @@ namespace runtime {
                 ASSERT_EQUAL(Logger::instance_count, 0);
                 auto one = ObjectHolder::Own(Logger());
                 ASSERT_EQUAL(Logger::instance_count, 1);
-                Object* stored = one.Get();
+                Object *stored = one.Get();
                 ObjectHolder two = std::move(one);
                 ASSERT_EQUAL(Logger::instance_count, 1);
 
@@ -283,37 +284,38 @@ namespace runtime {
         }
 
         void TestComparison() {
-            auto test_equal = [](const ObjectHolder& lhs, const ObjectHolder& rhs, bool equality_result) {
+            auto test_equal = [](const ObjectHolder &lhs, const ObjectHolder &rhs, bool equality_result) {
                 DummyContext ctx;
+                auto temp_result = Equal(lhs, rhs, ctx);
                 ASSERT(Equal(lhs, rhs, ctx) == equality_result);
                 ASSERT(NotEqual(lhs, rhs, ctx) == !equality_result);
             };
 
-            auto test_less = [](const ObjectHolder& lhs, const ObjectHolder& rhs, bool less_result) {
+            auto test_less = [](const ObjectHolder &lhs, const ObjectHolder &rhs, bool less_result) {
                 DummyContext ctx;
                 ASSERT(Less(lhs, rhs, ctx) == less_result);
                 ASSERT(GreaterOrEqual(lhs, rhs, ctx) == !less_result);
             };
 
-            auto test_greater = [](const ObjectHolder& lhs, const ObjectHolder& rhs, bool greater_result) {
+            auto test_greater = [](const ObjectHolder &lhs, const ObjectHolder &rhs, bool greater_result) {
                 DummyContext ctx;
                 ASSERT(Greater(lhs, rhs, ctx) == greater_result);
                 ASSERT(LessOrEqual(lhs, rhs, ctx) == !greater_result);
             };
 
-            auto test_eq_uncomparable = [](const ObjectHolder& lhs, const ObjectHolder& rhs) {
+            auto test_eq_uncomparable = [](const ObjectHolder &lhs, const ObjectHolder &rhs) {
                 DummyContext ctx;
                 ASSERT_THROWS(Equal(lhs, rhs, ctx), runtime_error);
                 ASSERT_THROWS(NotEqual(lhs, rhs, ctx), runtime_error);
             };
 
-            auto test_lt_uncomparable = [](const ObjectHolder& lhs, const ObjectHolder& rhs) {
+            auto test_lt_uncomparable = [](const ObjectHolder &lhs, const ObjectHolder &rhs) {
                 DummyContext ctx;
                 ASSERT_THROWS(Less(lhs, rhs, ctx), runtime_error);
                 ASSERT_THROWS(GreaterOrEqual(lhs, rhs, ctx), runtime_error);
             };
 
-            auto test_gt_uncomparable = [](const ObjectHolder& lhs, const ObjectHolder& rhs) {
+            auto test_gt_uncomparable = [](const ObjectHolder &lhs, const ObjectHolder &rhs) {
                 DummyContext ctx;
                 ASSERT_THROWS(Greater(lhs, rhs, ctx), runtime_error);
                 ASSERT_THROWS(LessOrEqual(lhs, rhs, ctx), runtime_error);
@@ -415,14 +417,14 @@ namespace runtime {
             {
                 Closure eq_closure;
                 auto eq_result = ObjectHolder::Own(Bool{true});
-                auto eq_body = [&eq_closure, &eq_result](Closure& closure, [[maybe_unused]] Context& ctx) {
+                auto eq_body = [&eq_closure, &eq_result](Closure &closure, [[maybe_unused]] Context &ctx) {
                     eq_closure = closure;
                     return eq_result;
                 };
 
                 Closure lt_closure;
                 auto lt_result = ObjectHolder::Own(Bool{true});
-                auto lt_body = [&lt_closure, &lt_result](Closure& closure, [[maybe_unused]] Context& ctx) {
+                auto lt_body = [&lt_closure, &lt_result](Closure &closure, [[maybe_unused]] Context &ctx) {
                     lt_closure = closure;
                     return lt_result;
                 };
@@ -476,9 +478,9 @@ namespace runtime {
 
         void TestClass() {
             vector<Method> methods;
-            Closure* passed_closure = nullptr;
-            Context* passed_context = nullptr;
-            auto body = [&passed_closure, &passed_context](Closure& closure, Context& ctx) {
+            Closure *passed_closure = nullptr;
+            Context *passed_context = nullptr;
+            auto body = [&passed_closure, &passed_context](Closure &closure, Context &ctx) {
                 passed_closure = &closure;
                 passed_context = &ctx;
                 return ObjectHolder::Own(Number{42});
@@ -488,14 +490,14 @@ namespace runtime {
             ASSERT_EQUAL(cls.GetName(), "Test"s);
             ASSERT_EQUAL(cls.GetMethod("missing_method"s), nullptr);
 
-            const Method* method = cls.GetMethod("method"s);
+            const Method *method = cls.GetMethod("method"s);
             ASSERT(method != nullptr);
             DummyContext ctx;
             Closure closure;
             auto result = method->body->Execute(closure, ctx);
             ASSERT_EQUAL(passed_context, &ctx);
             ASSERT_EQUAL(passed_closure, &closure);
-            const Number* returned_number = result.TryAs<Number>();
+            const Number *returned_number = result.TryAs<Number>();
             ASSERT(returned_number != nullptr && returned_number->GetValue() == 42);
 
             ostringstream out;
@@ -508,7 +510,7 @@ namespace runtime {
             vector<Method> methods;
 
             Closure passed_closure;
-            auto str_body = [&passed_closure](Closure& closure, [[maybe_unused]] Context& ctx) {
+            auto str_body = [&passed_closure](Closure &closure, [[maybe_unused]] Context &ctx) {
                 passed_closure = closure;
                 return ObjectHolder::Own(String{"result"s});
             };
@@ -518,7 +520,7 @@ namespace runtime {
             Class cls{"Test"s, move(methods), nullptr};
             ClassInstance instance{cls};
 
-            ASSERT_EQUAL(&instance.Fields(), &const_cast<const ClassInstance&>(instance).Fields());
+            ASSERT_EQUAL(&instance.Fields(), &const_cast<const ClassInstance &>(instance).Fields());
             ASSERT(instance.HasMethod("__str__"s, 0));
 
             ostringstream out;
@@ -531,7 +533,7 @@ namespace runtime {
 
     }  // namespace
 
-    void RunObjectsTests(TestRunner& tr) {
+    void RunObjectsTests(TestRunner &tr) {
         RUN_TEST(tr, runtime::TestNumber);
         RUN_TEST(tr, runtime::TestString);
         RUN_TEST(tr, runtime::TestBool);
@@ -542,7 +544,7 @@ namespace runtime {
         RUN_TEST(tr, runtime::TestClassInstance);
     }
 
-    void RunObjectHolderTests(TestRunner& tr) {
+    void RunObjectHolderTests(TestRunner &tr) {
         RUN_TEST(tr, runtime::TestNonowning);
         RUN_TEST(tr, runtime::TestOwning);
         RUN_TEST(tr, runtime::TestMove);

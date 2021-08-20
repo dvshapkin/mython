@@ -149,8 +149,6 @@ namespace runtime {
         // Выводит в os строку "Class <имя класса>", например "Class cat"
         void Print(std::ostream &os, Context &context) override;
 
-        ~Class() override = default;
-
     private:
         std::string name_;
         std::vector<Method> methods_;

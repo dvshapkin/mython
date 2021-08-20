@@ -26,7 +26,7 @@ namespace runtime {
     }
 
     ObjectHolder ObjectHolder::None() {
-        return ObjectHolder();
+        return {};
     }
 
     Object &ObjectHolder::operator*() const {
@@ -57,7 +57,12 @@ namespace runtime {
                 return object.TryAs<Number>()->GetValue() != 0;
             } else if (object.TryAs<String>()) {
                 return !object.TryAs<String>()->GetValue().empty();
+            } else if (object.TryAs<Class>()) {
+                return false;
+            } else if (object.TryAs<ClassInstance>()) {
+                return false;
             }
+
         }
         return true;
     }
@@ -72,7 +77,7 @@ namespace runtime {
 
     void ClassInstance::Print(std::ostream &os, Context &context) {
         if (HasMethod("__str__", 0)) {
-            Call("__str__", {}, context);
+            os << Call("__str__", {}, context).TryAs<String>()->GetValue();
         } else {
             os << this;
         }
@@ -95,11 +100,15 @@ namespace runtime {
                                      const std::vector<ObjectHolder> &actual_args,
                                      Context &context) {
         if (!HasMethod(method, actual_args.size())) {
-            throw std::runtime_error("Method not find."s);
+            throw std::runtime_error("Method not found."s);
         }
-        auto *p_method = const_cast<Method *>(cls_.GetMethod(method));
-        //p_method->formal_params.assign(actual_args.cbegin(), actual_args.cend());
-        return p_method->body->Execute(closure_, context);
+        auto *p_method = cls_.GetMethod(method);
+        Closure locals;
+        locals["self"s] = ObjectHolder::Share(*this);
+        for (size_t i = 0; i < p_method->formal_params.size(); ++i) {
+            locals[p_method->formal_params.at(i)] = actual_args.at(i);
+        }
+        return p_method->body->Execute(locals, context);
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -116,15 +125,17 @@ namespace runtime {
     const Method *Class::GetMethod(const std::string &name) const {
         if (methods_by_name_.count(name)) {
             return &methods_.at(methods_by_name_.at(name));
+        } else if (parent_) {
+            return parent_->GetMethod(name);
         }
         return nullptr;
     }
 
-    [[nodiscard]] inline const std::string &Class::GetName() const {
+    [[nodiscard]] const std::string &Class::GetName() const {   // inline ?
         return name_;
     }
 
-    void Class::Print(ostream &os, Context &context) {
+    void Class::Print(ostream &os, [[maybe_unused]] Context &context) {
         os << "Class "sv << name_;
     }
 
@@ -150,10 +161,12 @@ namespace runtime {
         if (lhs.TryAs<String>() && rhs.TryAs<String>()) {
             return lhs.TryAs<String>()->GetValue() == rhs.TryAs<String>()->GetValue();
         }
-        if (lhs.TryAs<ClassInstance>()->HasMethod("__eq__", 1)) {
-            return lhs.TryAs<ClassInstance>()->Call("__eq__", {rhs}, context).TryAs<Bool>();
+        if (lhs.TryAs<ClassInstance>() && lhs.TryAs<ClassInstance>()->HasMethod("__eq__", 1)) {
+            return lhs.TryAs<ClassInstance>()->Call("__eq__", {rhs}, context).TryAs<Bool>()->GetValue();
         }
-        if (!lhs && !rhs) return true;
+        if (!lhs.operator bool() && !rhs.operator bool()) {
+            return true;
+        }
         throw std::runtime_error("Cannot compare objects for equality"s);
     }
 
@@ -167,8 +180,8 @@ namespace runtime {
         if (lhs.TryAs<String>() && rhs.TryAs<String>()) {
             return lhs.TryAs<String>()->GetValue() < rhs.TryAs<String>()->GetValue();
         }
-        if (lhs.TryAs<ClassInstance>()->HasMethod("__lt__", 1)) {
-            return lhs.TryAs<ClassInstance>()->Call("__lt__", {rhs}, context).TryAs<Bool>();
+        if (lhs.TryAs<ClassInstance>() && lhs.TryAs<ClassInstance>()->HasMethod("__lt__", 1)) {
+            return lhs.TryAs<ClassInstance>()->Call("__lt__", {rhs}, context).TryAs<Bool>()->GetValue();
         }
         throw std::runtime_error("Cannot compare objects for less"s);
     }
