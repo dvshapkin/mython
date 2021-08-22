@@ -199,23 +199,24 @@ namespace ast {
 
     ObjectHolder Compound::Execute(Closure &closure, Context &context) {
         for (const auto &stmt: args_) {
-            if (dynamic_cast<Return *>(&*stmt)) {
-                return stmt->Execute(closure, context);
+            try {
+                stmt->Execute(closure, context);
+            } catch (ReturnException &ex) {
+                return ex.GetResult();
             }
-            stmt->Execute(closure, context);
         }
         return ObjectHolder::None();
     }
 
     ObjectHolder Return::Execute(Closure &closure, Context &context) {
-        return statement_->Execute(closure, context);
+        throw ReturnException(statement_->Execute(closure, context));
     }
 
     ClassDefinition::ClassDefinition(ObjectHolder cls)
             : cls_(std::move(cls)) {
     }
 
-    ObjectHolder ClassDefinition::Execute(Closure &closure, Context &context) {
+    ObjectHolder ClassDefinition::Execute(Closure &closure, Context &) {
         closure[cls_.TryAs<runtime::Class>()->GetName()] = cls_;
         return cls_;
     }
@@ -301,4 +302,11 @@ namespace ast {
         return body_->Execute(closure, context);
     }
 
+    ReturnException::ReturnException(runtime::ObjectHolder result)
+            : result_(std::move(result)) {
+    }
+
+    runtime::ObjectHolder ReturnException::GetResult() {
+        return result_;
+    }
 }  // namespace ast

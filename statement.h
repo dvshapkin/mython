@@ -357,4 +357,12 @@ namespace ast {
         Comparator cmp_;
     };
 
+    class ReturnException: public std::exception {
+    public:
+        explicit ReturnException(runtime::ObjectHolder result);
+        runtime::ObjectHolder GetResult();
+    private:
+        runtime::ObjectHolder result_;
+    };
+
 }  // namespace ast
