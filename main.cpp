@@ -131,7 +131,7 @@ int main() {
     try {
         TestAll();
 
-        RunMythonProgram(cin, cout);
+        //RunMythonProgram(cin, cout);
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;

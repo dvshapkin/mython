@@ -77,7 +77,8 @@ namespace runtime {
 
     void ClassInstance::Print(std::ostream &os, Context &context) {
         if (HasMethod("__str__", 0)) {
-            os << Call("__str__", {}, context).TryAs<String>()->GetValue();
+            //os << Call("__str__", {}, context).TryAs<String>()->GetValue();
+            Call("__str__", {}, context)->Print(os, context);
         } else {
             os << this;
         }

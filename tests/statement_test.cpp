@@ -10,8 +10,8 @@ namespace ast {
 
     namespace {
 
-        template <typename T>
-        void AssertObjectValueEqual(const ObjectHolder& obj, const T& expected, const string& msg) {
+        template<typename T>
+        void AssertObjectValueEqual(const ObjectHolder &obj, const T &expected, const string &msg) {
             ostringstream one;
             runtime::DummyContext context;
             obj->Print(one, context);
@@ -22,16 +22,16 @@ namespace ast {
             AssertEqual(one.str(), two.str(), msg);
         }
 
-#define ASSERT_OBJECT_VALUE_EQUAL(obj, expected)                                          \
+#define ASSERT_OBJECT_VALUE_EQUAL(obj, expected)                                      \
 {                                                                                     \
-std::ostringstream __assert_equal_private_os;                                     \
-__assert_equal_private_os << #obj << "'s value_ "sv                               \
-<< " != "sv << #expected << "s, "sv << FILE_NAME << ':' \
-<< __LINE__;                                            \
-AssertObjectValueEqual(obj, expected, __assert_equal_private_os.str());           \
+    std::ostringstream __assert_equal_private_os;                                     \
+    __assert_equal_private_os << #obj << "'s value_ "sv                               \
+    << " != "sv << #expected << "s, "sv << FILE_NAME << ':'                           \
+    << __LINE__;                                                                      \
+    AssertObjectValueEqual(obj, expected, __assert_equal_private_os.str());           \
 }
 
-void TestNumericConst() {
+        void TestNumericConst() {
             runtime::DummyContext context;
 
             NumericConst num(runtime::Number(57));
@@ -71,7 +71,8 @@ void TestNumericConst() {
             runtime::Number num(42);
             runtime::String word("Hello"s);
 
-            Closure closure = {{"x"s, ObjectHolder::Share(num)}, {"w"s, ObjectHolder::Share(word)}};
+            Closure closure = {{"x"s, ObjectHolder::Share(num)},
+                               {"w"s, ObjectHolder::Share(word)}};
             ASSERT(VariableValue("x"s).Execute(closure, context).Get() == &num);
             ASSERT(VariableValue("w"s).Execute(closure, context).Get() == &word);
             ASSERT_THROWS(VariableValue("unknown"s).Execute(closure, context), std::runtime_error);
@@ -137,7 +138,7 @@ void TestNumericConst() {
             }
 
             ASSERT(object.Fields().find("y"s) != object.Fields().end());
-            const auto* subobject = object.Fields().at("y"s).TryAs<runtime::ClassInstance>();
+            const auto *subobject = object.Fields().at("y"s).TryAs<runtime::ClassInstance>();
             ASSERT(subobject != nullptr && subobject->Fields().find("z"s) != subobject->Fields().end());
             ASSERT_OBJECT_VALUE_EQUAL(subobject->Fields().at("z"s), "Hello, world! Hooray! Yes-yes!!!"s);
 
@@ -152,6 +153,7 @@ void TestNumericConst() {
             auto print_statement = Print::Variable("y"s);
             print_statement->Execute(closure, context);
 
+            auto temp = context.output.str();
             ASSERT_EQUAL(context.output.str(), "42\n"s);
         }
 
@@ -159,7 +161,8 @@ void TestNumericConst() {
             runtime::DummyContext context;
 
             runtime::String hello("hello"s);
-            Closure closure = {{"word"s, ObjectHolder::Share(hello)}, {"empty"s, ObjectHolder::None()}};
+            Closure closure = {{"word"s,  ObjectHolder::Share(hello)},
+                               {"empty"s, ObjectHolder::None()}};
 
             vector<unique_ptr<Statement>> args;
             args.push_back(make_unique<VariableValue>("word"s));
@@ -169,6 +172,7 @@ void TestNumericConst() {
 
             Print(std::move(args)).Execute(closure, context);
 
+            auto temp = context.output.str();
             ASSERT_EQUAL(context.output.str(), "hello 57 Python None\n"s);
         }
 
@@ -291,10 +295,10 @@ void TestNumericConst() {
             runtime::DummyContext context;
 
             Compound cpd{
-                make_unique<Assignment>("x"s, make_unique<StringConst>("one"s)),
-                make_unique<Assignment>("y"s, make_unique<NumericConst>(2)),
-                make_unique<Assignment>("z"s, make_unique<VariableValue>("x"s)),
-                };
+                    make_unique<Assignment>("x"s, make_unique<StringConst>("one"s)),
+                    make_unique<Assignment>("y"s, make_unique<NumericConst>(2)),
+                    make_unique<Assignment>("z"s, make_unique<VariableValue>("x"s)),
+            };
 
             Closure closure;
             auto result = cpd.Execute(closure, context);
@@ -334,7 +338,7 @@ void TestNumericConst() {
 
             for (int i = 1, expected = 0; i < 10; expected += i, ++i) {
                 auto fv = inst.Call("value"s, {}, context);
-                auto* obj = fv.TryAs<runtime::Number>();
+                auto *obj = fv.TryAs<runtime::Number>();
                 ASSERT(obj);
                 ASSERT_EQUAL(obj->GetValue(), expected);
 
@@ -356,13 +360,13 @@ void TestNumericConst() {
 
             ASSERT_EQUAL(cls.GetName(), "BoxedValue"s);
             {
-                const auto* m = cls.GetMethod("GetValue"s);
+                const auto *m = cls.GetMethod("GetValue"s);
                 ASSERT(m != nullptr);
                 ASSERT_EQUAL(m->name, "GetValue"s);
                 ASSERT(m->formal_params.empty());
             }
             {
-                const auto* m = cls.GetMethod("SetValue"s);
+                const auto *m = cls.GetMethod("SetValue"s);
                 ASSERT(m != nullptr);
                 ASSERT_EQUAL(m->name, "SetValue"s);
                 ASSERT_EQUAL(m->formal_params.size(), 1U);
@@ -387,19 +391,19 @@ void TestNumericConst() {
 
             ASSERT_EQUAL(cls.GetName(), "StringableValue"s);
             {
-                const auto* m = cls.GetMethod("GetValue"s);
+                const auto *m = cls.GetMethod("GetValue"s);
                 ASSERT(m != nullptr);
                 ASSERT_EQUAL(m->name, "GetValue"s);
                 ASSERT_EQUAL(m->formal_params.size(), 1U);
             }
             {
-                const auto* m = cls.GetMethod("SetValue"s);
+                const auto *m = cls.GetMethod("SetValue"s);
                 ASSERT(m != nullptr);
                 ASSERT_EQUAL(m->name, "SetValue"s);
                 ASSERT_EQUAL(m->formal_params.size(), 1U);
             }
             {
-                const auto* m = cls.GetMethod("AsString"s);
+                const auto *m = cls.GetMethod("AsString"s);
                 ASSERT(m != nullptr);
                 ASSERT_EQUAL(m->name, "AsString"s);
                 ASSERT(m->formal_params.empty());
@@ -455,7 +459,7 @@ void TestNumericConst() {
 
     }  // namespace
 
-    void RunUnitTests(TestRunner& tr) {
+    void RunUnitTests(TestRunner &tr) {
         RUN_TEST(tr, ast::TestNumericConst);
         RUN_TEST(tr, ast::TestStringConst);
         RUN_TEST(tr, ast::TestVariable);
