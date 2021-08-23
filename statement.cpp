@@ -69,10 +69,10 @@ namespace ast {
         auto dotted_ids = object_.GetDottedIds();
         Closure *p_closure = &closure;
         for (const auto &id: dotted_ids) {
-            auto val = p_closure->at(id);
+            auto &val = p_closure->at(id);
             p_closure = &val.TryAs<runtime::ClassInstance>()->Fields();
         }
-        (*p_closure)[field_name_] = rv_->Execute(closure, context);
+        (*p_closure)[field_name_] = std::move(rv_->Execute(closure, context));
         return p_closure->at(field_name_);
     }
 
@@ -150,7 +150,6 @@ namespace ast {
             }
             // ClassInstance
             auto lhs_as_obj = lhs_holder.TryAs<runtime::ClassInstance>();
-            //auto rhs_as_obj = rhs_holder.TryAs<runtime::ClassInstance>();
             if (lhs_as_obj && lhs_as_obj->HasMethod(ADD_METHOD, 1)) {
                 return lhs_as_obj->Call(ADD_METHOD, {rhs_holder}, context);
             }

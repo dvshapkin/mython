@@ -111,6 +111,28 @@ print y.value
         ASSERT_EQUAL(output.str(), "2\n3\n");
     }
 
+    void TestWithSelf() {
+        istringstream input(R"(
+class X:
+  def __init__(p):
+    p.a = self
+
+class XHolder:
+  def __init__():
+    dummy = 0
+
+xh = XHolder()
+x = X(xh)
+
+print xh.a
+        )");
+
+        ostringstream output;
+        RunMythonProgram(input, output);
+
+        //ASSERT_EQUAL(output.str(), "57\nC++ black belt\nFalse\nNone False\n");
+    }
+
     void TestAll() {
         TestRunner tr;
         parse::RunOpenLexerTests(tr);
@@ -123,6 +145,7 @@ print y.value
         RUN_TEST(tr, TestAssignments);
         RUN_TEST(tr, TestArithmetics);
         RUN_TEST(tr, TestVariablesArePointers);
+        RUN_TEST(tr, TestWithSelf);
     }
 
 }  // namespace
