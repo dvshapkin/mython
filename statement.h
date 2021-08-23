@@ -45,7 +45,7 @@ namespace ast {
 
         [[nodiscard]] std::string GetName() const;
 
-        const std::vector<std::string> &GetDottedIds() const;
+        [[nodiscard]] const std::vector<std::string> &GetDottedIds() const;
 
     private:
         std::vector<std::string> dotted_ids_;
