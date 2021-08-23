@@ -170,6 +170,7 @@ print x.call_count
         auto tree = ParseProgramFromString(program);
         tree->Execute(closure, context);
 
+        auto temp = context.output.str();
         ASSERT_EQUAL(context.output.str(), "17\n1\n115\n"s);
     }
 

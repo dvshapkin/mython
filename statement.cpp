@@ -94,7 +94,7 @@ namespace ast {
             auto holder = (*it)->Execute(closure, context);
             if (it != args_.cbegin()) out << ' ';
             if (holder) {
-                (*it)->Execute(closure, context)->Print(out, context);
+                holder->Print(out, context);
             } else {
                 out << "None";
             }
@@ -151,8 +151,8 @@ namespace ast {
             // ClassInstance
             auto lhs_as_obj = lhs_holder.TryAs<runtime::ClassInstance>();
             //auto rhs_as_obj = rhs_holder.TryAs<runtime::ClassInstance>();
-            if (lhs_as_obj && lhs_as_obj->HasMethod("__add__", 1)) {
-                return lhs_as_obj->Call("__add__", {rhs_holder}, context);
+            if (lhs_as_obj && lhs_as_obj->HasMethod(ADD_METHOD, 1)) {
+                return lhs_as_obj->Call(ADD_METHOD, {rhs_holder}, context);
             }
         }
         throw runtime_error("Invalid arguments in Add");
@@ -199,17 +199,14 @@ namespace ast {
 
     ObjectHolder Compound::Execute(Closure &closure, Context &context) {
         for (const auto &stmt: args_) {
-            try {
-                stmt->Execute(closure, context);
-            } catch (ReturnException &ex) {
-                return ex.GetResult();
-            }
+            stmt->Execute(closure, context);
         }
         return ObjectHolder::None();
     }
 
     ObjectHolder Return::Execute(Closure &closure, Context &context) {
-        throw ReturnException(statement_->Execute(closure, context));
+        auto holder = statement_->Execute(closure, context);
+        throw ReturnException(std::move(holder));
     }
 
     ClassDefinition::ClassDefinition(ObjectHolder cls)
@@ -284,22 +281,26 @@ namespace ast {
 
     ObjectHolder NewInstance::Execute(Closure &closure, Context &context) {
         runtime::ClassInstance instance{class_};
-        if (instance.HasMethod("__init__"s, args_.size())) {
+        if (instance.HasMethod(INIT_METHOD, args_.size())) {
             std::vector<ObjectHolder> actual_args;
             for (const auto &stmt: args_) {
                 actual_args.push_back(stmt->Execute(closure, context));
             }
-            instance.Call("__init__"s, actual_args, context);
+            instance.Call(INIT_METHOD, actual_args, context);
         }
         return ObjectHolder::Own(std::move(instance));
     }
 
-    MethodBody::MethodBody(std::unique_ptr<Statement> &&body)
-            : body_(std::forward<std::unique_ptr<Statement>>(body)) {
+    MethodBody::MethodBody(std::unique_ptr<Statement> body)
+            : body_(std::move(body)) {
     }
 
     ObjectHolder MethodBody::Execute(Closure &closure, Context &context) {
-        return body_->Execute(closure, context);
+        try {
+            return body_->Execute(closure, context);
+        } catch (ReturnException &ex) {
+            return ex.GetResult();
+        }
     }
 
     ReturnException::ReturnException(runtime::ObjectHolder result)

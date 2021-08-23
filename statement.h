@@ -285,7 +285,7 @@ namespace ast {
     // Тело метода. Как правило, содержит составную инструкцию
     class MethodBody : public Statement {
     public:
-        explicit MethodBody(std::unique_ptr<Statement> &&body);
+        explicit MethodBody(std::unique_ptr<Statement> body);
 
         // Вычисляет инструкцию, переданную в качестве body.
         // Если внутри body была выполнена инструкция return, возвращает результат return
@@ -293,7 +293,7 @@ namespace ast {
         runtime::ObjectHolder Execute(runtime::Closure &closure, runtime::Context &context) override;
 
     private:
-        std::unique_ptr<Statement> &&body_;
+        std::unique_ptr<Statement> body_;
     };
 
     // Выполняет инструкцию return с выражением statement
