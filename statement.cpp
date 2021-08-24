@@ -52,6 +52,7 @@ namespace ast {
     }
 
     ObjectHolder Assignment::Execute(Closure &closure, Context &context) {
+        context.SetSelfName(var_name_);
         closure[var_name_] = rv_->Execute(closure, context);
         return closure.at(var_name_);
     }
@@ -279,15 +280,20 @@ namespace ast {
     }
 
     ObjectHolder NewInstance::Execute(Closure &closure, Context &context) {
-        runtime::ClassInstance instance{class_};
-        if (instance.HasMethod(INIT_METHOD, args_.size())) {
+        std::string self_name = context.GetSelfName();
+        {
+            runtime::ClassInstance inst{class_};
+            closure[self_name] = ObjectHolder::Own(std::move(inst));
+        }
+        auto *instance = const_cast<runtime::ClassInstance *>(closure.at(self_name).TryAs<runtime::ClassInstance>());
+        if (instance->HasMethod(INIT_METHOD, args_.size())) {
             std::vector<ObjectHolder> actual_args;
             for (const auto &stmt: args_) {
                 actual_args.push_back(stmt->Execute(closure, context));
             }
-            instance.Call(INIT_METHOD, actual_args, context);
+            instance->Call(INIT_METHOD, actual_args, context);
         }
-        return ObjectHolder::Own(std::move(instance));
+        return closure.at(self_name);
     }
 
     MethodBody::MethodBody(std::unique_ptr<Statement> body)

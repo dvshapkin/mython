@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace runtime {
@@ -14,8 +15,19 @@ namespace runtime {
         // Возвращает поток вывода для команд print
         virtual std::ostream &GetOutputStream() = 0;
 
+        void SetSelfName(std::string self_name) {
+            self_name_ = std::move(self_name);
+        }
+
+        [[nodiscard]] const std::string &GetSelfName() const {
+            return self_name_;
+        }
+
     protected:
         ~Context() = default;
+
+    private:
+        std::string self_name_;
     };
 
     // Базовый класс для всех объектов языка Mython
@@ -188,6 +200,7 @@ namespace runtime {
     private:
         const Class &cls_;
         Closure closure_;
+        //std::shared_ptr<ClassInstance> self_;
     };
 
     /*

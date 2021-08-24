@@ -73,6 +73,8 @@ namespace runtime {
 
     ClassInstance::ClassInstance(const Class &cls)
             : cls_(cls) {
+        //self_ = std::shared_ptr<ClassInstance>(this, [](auto * /*p*/) { /* do nothing */ });
+        //p_locals_ = new Closure {};
     }
 
     void ClassInstance::Print(std::ostream &os, Context &context) {
@@ -106,6 +108,7 @@ namespace runtime {
         auto *p_method = cls_.GetMethod(method);
         Closure locals;
         locals["self"s] = ObjectHolder::Share(*this);
+        //locals["self"s] = ObjectHolder::Share(*self_);
         for (size_t i = 0; i < p_method->formal_params.size(); ++i) {
             locals[p_method->formal_params.at(i)] = actual_args.at(i);
         }
