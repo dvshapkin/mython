@@ -200,7 +200,6 @@ namespace runtime {
     private:
         const Class &cls_;
         Closure closure_;
-        //std::shared_ptr<ClassInstance> self_;
     };
 
     /*
